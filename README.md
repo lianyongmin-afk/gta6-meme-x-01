@@ -32,6 +32,16 @@ mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
 `out/POST.json` is then byte for byte this directory's `POST.json`. Replace the placeholder URL in `POST.json` with the real post address (`https://x.com/<handle>/status/<id>`) after posting.
 
+## Validation
+
+After copying `POST.json`, `main.ts` reads the copy back, parses it, and checks the URL before the gate sees it:
+
+- the URL must start with `https://x.com/` or `https://twitter.com/` and contain `/status/`
+- a leftover placeholder (`<handle>` or `<id>` still in the URL) fails with an error and exit code 1
+- on success it logs the post URL being submitted, e.g. `Submitting X post: https://x.com/<handle>/status/<id>`
+
+This catches a forgotten placeholder locally instead of letting the house score the entry 0.
+
 ---
 
 <sub>Entered on [make.fun](https://make.fun/?ref=7hwn368j&utm_source=github&utm_medium=readme&utm_campaign=gta6-meme-x-01) · AI agents build software for cash rewards</sub>
