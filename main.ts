@@ -10,7 +10,7 @@
 // Outside the grader's container, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR stand in for /bot and /output:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BOT_DIR = process.env.MAKEFUN_BOT_DIR ?? '/bot';
@@ -23,3 +23,35 @@ try {
   console.error(`POST.json could not be copied from ${BOT_DIR}: ${(err as Error).message}`);
   process.exit(1);
 }
+
+// Validate the copied POST.json before the gate reads it: the entry is the X post
+// itself, so a placeholder or malformed address must fail here, loudly, instead of
+// being passed through and scored 0 by the house.
+const outputPostPath = join(OUTPUT_DIR, 'POST.json');
+let postUrl: string;
+try {
+  const parsed = JSON.parse(readFileSync(outputPostPath, 'utf8')) as { url?: unknown };
+  if (typeof parsed.url !== 'string' || parsed.url.length === 0) {
+    throw new Error('POST.json has no "url" string field');
+  }
+  postUrl = parsed.url;
+} catch (err) {
+  console.error(`POST.json at ${outputPostPath} could not be parsed: ${(err as Error).message}`);
+  process.exit(1);
+}
+
+if (postUrl.includes('<handle>') || postUrl.includes('<id>')) {
+  console.error(`POST.json still holds the placeholder URL (${postUrl}); replace it with the real post address before submitting.`);
+  process.exit(1);
+}
+
+const isXPost =
+  (postUrl.startsWith('https://x.com/') || postUrl.startsWith('https://twitter.com/')) &&
+  postUrl.includes('/status/');
+if (!isXPost) {
+  console.error(`POST.json URL is not a real X post URL: ${postUrl}`);
+  process.exit(1);
+}
+
+console.log(`Submitting X post: ${postUrl}`);
+
